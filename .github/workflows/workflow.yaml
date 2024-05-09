@@ -1,0 +1,48 @@
+name: Test Application and Publish Docker Image
+
+on:
+    push:
+        branches:
+            - "main"
+
+jobs:
+    test:
+        name: Test Application
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Use Node.js
+              uses: actions/setup-node@v4
+              with:
+                node-version: '20'
+            - name: Install dependencies
+              run: yarn --frozen-lockfile
+            - name: Run test
+              run: yarn test
+            - run: echo "All test passed!"
+
+    publish-docker-image:
+        name: Publish Docker Image
+        runs-on: ubuntu-latest
+        needs: test
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Login to Docker Hub
+              uses: docker/login-action@v3
+              with:
+                username: ${{secrets.DOCKER_USERNAME}}
+                password: ${{secrets.DOCKER_PASSWORD}}
+            - name: Extract meta information
+              id: meta
+              uses: docker/metadata-action@v3
+              with:
+                images: majedurcse/github-action-fs
+            - name: Build and Push
+              uses: docker/build-push-action@v3
+              with:
+                context: .
+                file: ./Dockerfile
+                push: true
+                tags: ${{steps.meta.outputs.tags}}
